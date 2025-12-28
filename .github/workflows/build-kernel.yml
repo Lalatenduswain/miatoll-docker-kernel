@@ -1,0 +1,175 @@
+name: Build Miatoll Kernel with Docker Support
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+env:
+  DEVICE_REPO: https://gitlab.com/ubports/porting/community-ports/android10/xiaomi-redmi-note-9-pro/xiaomi-miatoll.git
+  DEVICE_BRANCH: halium-10.0
+  KERNEL_REPO: https://gitlab.com/ubports/community-ports/android10/xiaomi-redmi-note-9-pro/kernel-xiaomi-sm6250.git
+  KERNEL_BRANCH: halium-10.0-release
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+
+    - name: Free up disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+        sudo apt-get clean
+        df -h
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          bc bison build-essential ca-certificates cpio curl flex git \
+          kmod libssl-dev libtinfo5 python2 python3 unzip wget xz-utils \
+          android-tools-mkbootimg img2simg jq device-tree-compiler \
+          gcc-aarch64-linux-gnu crossbuild-essential-arm64 libelf-dev
+
+    - name: Clone device repository
+      run: |
+        git clone --depth 1 -b $DEVICE_BRANCH $DEVICE_REPO device
+        ls -la device/
+
+    - name: Clone kernel source
+      run: |
+        git clone --depth 1 -b $KERNEL_BRANCH $KERNEL_REPO kernel
+        echo "Kernel cloned successfully"
+
+    - name: Create Docker support halium.config
+      run: |
+        cat > kernel/arch/arm64/configs/halium.config << 'EOF'
+        # ===========================================
+        # Docker Container Support Configuration
+        # ===========================================
+
+        # POSIX Message Queues (required for container IPC)
+        CONFIG_POSIX_MQUEUE=y
+        CONFIG_POSIX_MQUEUE_SYSCTL=y
+
+        # Netfilter nftables support
+        CONFIG_NF_TABLES=y
+        CONFIG_NF_TABLES_INET=y
+        CONFIG_NF_TABLES_NETDEV=y
+        CONFIG_NFT_NUMGEN=y
+        CONFIG_NFT_CT=y
+        CONFIG_NFT_COUNTER=y
+        CONFIG_NFT_LOG=y
+        CONFIG_NFT_LIMIT=y
+        CONFIG_NFT_MASQ=y
+        CONFIG_NFT_REDIR=y
+        CONFIG_NFT_NAT=y
+        CONFIG_NFT_REJECT=y
+        CONFIG_NFT_COMPAT=y
+        CONFIG_NFT_HASH=y
+
+        # Cgroup matching for iptables
+        CONFIG_NETFILTER_XT_MATCH_CGROUP=y
+        CONFIG_NETFILTER_XT_MATCH_IPVS=y
+
+        # Bridge and VETH for container networking
+        CONFIG_VETH=y
+        CONFIG_BRIDGE=y
+        CONFIG_BRIDGE_NETFILTER=y
+
+        # NAT support
+        CONFIG_IP_NF_NAT=y
+        CONFIG_IP_NF_TARGET_MASQUERADE=y
+        CONFIG_IP_NF_TARGET_REDIRECT=y
+        CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+        CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
+
+        # Overlay filesystem (Docker storage driver)
+        CONFIG_OVERLAY_FS=y
+
+        # Cgroup controllers for container resource limits
+        CONFIG_CGROUP_PIDS=y
+        CONFIG_CGROUP_HUGETLB=y
+        CONFIG_CPUSETS=y
+        CONFIG_MEMCG=y
+        CONFIG_MEMCG_SWAP=y
+
+        # User namespaces
+        CONFIG_USER_NS=y
+        EOF
+
+        echo "Created halium.config with Docker support"
+        cat kernel/arch/arm64/configs/halium.config
+
+    - name: Update deviceinfo to use halium.config
+      run: |
+        # Backup original
+        cp device/deviceinfo device/deviceinfo.orig
+
+        # Update defconfig line to include halium.config
+        sed -i 's/deviceinfo_kernel_defconfig="cust_defconfig"/deviceinfo_kernel_defconfig="cust_defconfig halium.config"/' device/deviceinfo
+
+        # Show the change
+        echo "=== Updated deviceinfo ==="
+        diff device/deviceinfo.orig device/deviceinfo || true
+
+    - name: Point device to local kernel
+      run: |
+        # Update deviceinfo to use local kernel path
+        sed -i 's|deviceinfo_kernel_source=.*|deviceinfo_kernel_source="../kernel"|' device/deviceinfo
+        sed -i 's|deviceinfo_kernel_source_branch=.*|deviceinfo_kernel_source_branch=""|' device/deviceinfo
+
+        cat device/deviceinfo
+
+    - name: Build kernel
+      run: |
+        cd device
+        chmod +x build.sh build/*.sh 2>/dev/null || true
+
+        # Set up environment
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        # Run the build
+        ./build.sh -b ../workdir 2>&1 | tee ../build.log
+      timeout-minutes: 60
+
+    - name: Collect build artifacts
+      if: always()
+      run: |
+        mkdir -p artifacts
+
+        # Find and copy boot images
+        find workdir -name "boot.img" -exec cp {} artifacts/ \; 2>/dev/null || true
+        find workdir -name "recovery.img" -exec cp {} artifacts/ \; 2>/dev/null || true
+        find . -name "*.img" -path "*/out/*" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+        # Copy build log
+        cp build.log artifacts/ 2>/dev/null || true
+
+        # Copy the halium.config we created
+        cp kernel/arch/arm64/configs/halium.config artifacts/ 2>/dev/null || true
+
+        echo "=== Artifacts collected ==="
+        ls -la artifacts/
+
+    - name: Upload kernel artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: miatoll-docker-kernel-${{ github.run_number }}
+        path: artifacts/
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Upload build log on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: build-log-failure
+        path: build.log
+        retention-days: 7
