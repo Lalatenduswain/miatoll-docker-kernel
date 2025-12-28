@@ -42,53 +42,43 @@ jobs:
 
     - name: Pre-clone kernel and add halium.config
       run: |
-        # Create workdir structure
         mkdir -p workdir
-
-        # Clone the kernel first
         echo "Cloning kernel repository..."
         git clone --depth 1 -b $KERNEL_BRANCH $KERNEL_REPO workdir/kernel
-
-        # Create halium.config with Docker support configs
         echo "Creating halium.config with Docker support..."
-        cat > workdir/kernel/arch/arm64/configs/halium.config << 'EOF'
-CONFIG_POSIX_MQUEUE=y
-CONFIG_POSIX_MQUEUE_SYSCTL=y
-CONFIG_NF_TABLES=y
-CONFIG_NF_TABLES_INET=y
-CONFIG_NF_TABLES_NETDEV=y
-CONFIG_NFT_NUMGEN=y
-CONFIG_NFT_CT=y
-CONFIG_NFT_COUNTER=y
-CONFIG_NFT_LOG=y
-CONFIG_NFT_LIMIT=y
-CONFIG_NFT_MASQ=y
-CONFIG_NFT_REDIR=y
-CONFIG_NFT_NAT=y
-CONFIG_NFT_REJECT=y
-CONFIG_NFT_COMPAT=y
-CONFIG_NFT_HASH=y
-CONFIG_NETFILTER_XT_MATCH_CGROUP=y
-CONFIG_NETFILTER_XT_MATCH_IPVS=y
-CONFIG_VETH=y
-CONFIG_BRIDGE=y
-CONFIG_BRIDGE_NETFILTER=y
-CONFIG_IP_NF_NAT=y
-CONFIG_IP_NF_TARGET_MASQUERADE=y
-CONFIG_IP_NF_TARGET_REDIRECT=y
-CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
-CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
-CONFIG_OVERLAY_FS=y
-CONFIG_CGROUP_PIDS=y
-CONFIG_CPUSETS=y
-CONFIG_MEMCG=y
-CONFIG_USER_NS=y
-EOF
-
+        echo "CONFIG_POSIX_MQUEUE=y" > workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_POSIX_MQUEUE_SYSCTL=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NF_TABLES=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NF_TABLES_INET=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NF_TABLES_NETDEV=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_NUMGEN=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_CT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_COUNTER=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_LOG=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_LIMIT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_MASQ=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_REDIR=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_NAT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_REJECT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_COMPAT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_HASH=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_CGROUP=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_IPVS=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_VETH=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_BRIDGE=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_BRIDGE_NETFILTER=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_IP_NF_NAT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_IP_NF_TARGET_MASQUERADE=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_IP_NF_TARGET_REDIRECT=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_OVERLAY_FS=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_CGROUP_PIDS=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_CPUSETS=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_MEMCG=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_USER_NS=y" >> workdir/kernel/arch/arm64/configs/halium.config
         echo "=== halium.config created ==="
         cat workdir/kernel/arch/arm64/configs/halium.config
-
-        echo "=== Kernel configs directory ==="
         ls -la workdir/kernel/arch/arm64/configs/
 
     - name: Update deviceinfo to include halium.config
@@ -101,13 +91,9 @@ EOF
       run: |
         cd device
         chmod +x build.sh build/*.sh 2>/dev/null || true
-
-        # Set up environment
         export ARCH=arm64
         export SUBARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-
-        # Run the build
         ./build.sh -b ../workdir 2>&1 | tee ../build.log
       timeout-minutes: 90
 
@@ -115,16 +101,11 @@ EOF
       if: always()
       run: |
         mkdir -p artifacts
-
-        # Find and copy all images
         find workdir -name "boot.img" -exec cp {} artifacts/ \; 2>/dev/null || true
         find workdir -name "recovery.img" -exec cp {} artifacts/ \; 2>/dev/null || true
         find device -name "boot.img" -exec cp {} artifacts/ \; 2>/dev/null || true
         find device/out -name "*.img" -exec cp {} artifacts/ \; 2>/dev/null || true
-
-        # Copy build log
         cp build.log artifacts/ 2>/dev/null || true
-
         echo "=== Artifacts collected ==="
         ls -la artifacts/
 
