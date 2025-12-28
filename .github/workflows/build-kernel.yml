@@ -42,44 +42,45 @@ jobs:
 
     - name: Pre-clone kernel and add halium.config
       run: |
-        mkdir -p workdir
-        echo "Cloning kernel repository..."
-        git clone --depth 1 -b $KERNEL_BRANCH $KERNEL_REPO workdir/kernel
+        # Create the exact directory structure the build script expects
+        mkdir -p workdir/downloads
+        echo "Cloning kernel repository to correct location..."
+        git clone --depth 1 -b $KERNEL_BRANCH $KERNEL_REPO workdir/downloads/kernel-xiaomi-sm6250
         echo "Creating halium.config with Docker support..."
-        echo "CONFIG_POSIX_MQUEUE=y" > workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_POSIX_MQUEUE_SYSCTL=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NF_TABLES=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NF_TABLES_INET=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NF_TABLES_NETDEV=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_NUMGEN=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_CT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_COUNTER=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_LOG=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_LIMIT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_MASQ=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_REDIR=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_NAT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_REJECT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_COMPAT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NFT_HASH=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NETFILTER_XT_MATCH_CGROUP=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NETFILTER_XT_MATCH_IPVS=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_VETH=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_BRIDGE=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_BRIDGE_NETFILTER=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_IP_NF_NAT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_IP_NF_TARGET_MASQUERADE=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_IP_NF_TARGET_REDIRECT=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_OVERLAY_FS=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_CGROUP_PIDS=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_CPUSETS=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_MEMCG=y" >> workdir/kernel/arch/arm64/configs/halium.config
-        echo "CONFIG_USER_NS=y" >> workdir/kernel/arch/arm64/configs/halium.config
+        echo "CONFIG_POSIX_MQUEUE=y" > workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_POSIX_MQUEUE_SYSCTL=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NF_TABLES=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NF_TABLES_INET=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NF_TABLES_NETDEV=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_NUMGEN=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_CT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_COUNTER=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_LOG=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_LIMIT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_MASQ=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_REDIR=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_NAT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_REJECT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_COMPAT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NFT_HASH=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_CGROUP=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_IPVS=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_VETH=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_BRIDGE=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_BRIDGE_NETFILTER=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_IP_NF_NAT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_IP_NF_TARGET_MASQUERADE=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_IP_NF_TARGET_REDIRECT=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_OVERLAY_FS=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_CGROUP_PIDS=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_CPUSETS=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_MEMCG=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        echo "CONFIG_USER_NS=y" >> workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
         echo "=== halium.config created ==="
-        cat workdir/kernel/arch/arm64/configs/halium.config
-        ls -la workdir/kernel/arch/arm64/configs/
+        cat workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/halium.config
+        ls -la workdir/downloads/kernel-xiaomi-sm6250/arch/arm64/configs/
 
     - name: Update deviceinfo to include halium.config
       run: |
