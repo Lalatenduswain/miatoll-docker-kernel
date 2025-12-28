@@ -104,30 +104,75 @@ jobs:
         echo "Created halium.config with Docker support"
         cat kernel/arch/arm64/configs/halium.config
 
-    - name: Update deviceinfo to use halium.config
+    - name: Update deviceinfo to include halium.config
       run: |
-        # Backup original
-        cp device/deviceinfo device/deviceinfo.orig
-
         # Update defconfig line to include halium.config
         sed -i 's/deviceinfo_kernel_defconfig="cust_defconfig"/deviceinfo_kernel_defconfig="cust_defconfig halium.config"/' device/deviceinfo
 
-        # Show the change
+        # Keep the original kernel source URL (don't modify it)
         echo "=== Updated deviceinfo ==="
-        diff device/deviceinfo.orig device/deviceinfo || true
+        grep "defconfig" device/deviceinfo
 
-    - name: Point device to local kernel
+    - name: Copy halium.config to device build location
       run: |
-        # Update deviceinfo to use local kernel path
-        sed -i 's|deviceinfo_kernel_source=.*|deviceinfo_kernel_source="../kernel"|' device/deviceinfo
-        sed -i 's|deviceinfo_kernel_source_branch=.*|deviceinfo_kernel_source_branch=""|' device/deviceinfo
+        # The build script will clone kernel fresh, so we need to inject config after
+        # Create a script to add halium.config after kernel clone
+        cat > device/inject-halium-config.sh << 'SCRIPT'
+        #!/bin/bash
+        KERNEL_CONFIGS="$1/arch/arm64/configs"
+        if [ -d "$KERNEL_CONFIGS" ]; then
+          cat > "$KERNEL_CONFIGS/halium.config" << 'EOF'
+        CONFIG_POSIX_MQUEUE=y
+        CONFIG_POSIX_MQUEUE_SYSCTL=y
+        CONFIG_NF_TABLES=y
+        CONFIG_NF_TABLES_INET=y
+        CONFIG_NF_TABLES_NETDEV=y
+        CONFIG_NFT_NUMGEN=y
+        CONFIG_NFT_CT=y
+        CONFIG_NFT_COUNTER=y
+        CONFIG_NFT_LOG=y
+        CONFIG_NFT_LIMIT=y
+        CONFIG_NFT_MASQ=y
+        CONFIG_NFT_REDIR=y
+        CONFIG_NFT_NAT=y
+        CONFIG_NFT_REJECT=y
+        CONFIG_NFT_COMPAT=y
+        CONFIG_NFT_HASH=y
+        CONFIG_NETFILTER_XT_MATCH_CGROUP=y
+        CONFIG_NETFILTER_XT_MATCH_IPVS=y
+        CONFIG_VETH=y
+        CONFIG_BRIDGE=y
+        CONFIG_BRIDGE_NETFILTER=y
+        CONFIG_IP_NF_NAT=y
+        CONFIG_IP_NF_TARGET_MASQUERADE=y
+        CONFIG_IP_NF_TARGET_REDIRECT=y
+        CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+        CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
+        CONFIG_OVERLAY_FS=y
+        CONFIG_CGROUP_PIDS=y
+        CONFIG_CGROUP_HUGETLB=y
+        CONFIG_CPUSETS=y
+        CONFIG_MEMCG=y
+        CONFIG_MEMCG_SWAP=y
+        CONFIG_USER_NS=y
+        EOF
+          echo "Injected halium.config into kernel"
+        fi
+        SCRIPT
+        chmod +x device/inject-halium-config.sh
 
-        cat device/deviceinfo
+    - name: Patch build script to inject halium.config
+      run: |
+        # Modify build-kernel.sh to inject our config after cloning
+        sed -i '/git clone.*KERNEL_DIR/a\    ../inject-halium-config.sh "$KERNEL_DIR"' device/build/build-kernel.sh || true
+
+        # Also try patching build.sh directly
+        sed -i '/git clone.*kernel/a\    ./inject-halium-config.sh "kernel" 2>/dev/null || true' device/build.sh || true
 
     - name: Build kernel
       run: |
         cd device
-        chmod +x build.sh build/*.sh 2>/dev/null || true
+        chmod +x build.sh build/*.sh inject-halium-config.sh 2>/dev/null || true
 
         # Set up environment
         export ARCH=arm64
@@ -136,7 +181,7 @@ jobs:
 
         # Run the build
         ./build.sh -b ../workdir 2>&1 | tee ../build.log
-      timeout-minutes: 60
+      timeout-minutes: 90
 
     - name: Collect build artifacts
       if: always()
@@ -151,7 +196,7 @@ jobs:
         # Copy build log
         cp build.log artifacts/ 2>/dev/null || true
 
-        # Copy the halium.config we created
+        # Copy the halium.config
         cp kernel/arch/arm64/configs/halium.config artifacts/ 2>/dev/null || true
 
         echo "=== Artifacts collected ==="
